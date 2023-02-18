@@ -1,0 +1,7 @@
+/assets
+.hg/
+*.hgignore
+*.doc*
+*.xls*
+*.html
+*.webp
