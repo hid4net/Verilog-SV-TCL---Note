@@ -20,9 +20,10 @@
   - [1.6. 注释](#-16-注释-)
 - [2. 变量](#-2-变量-)
   - [2.1. 简单变量](#-21-简单变量-)
-  - [2.2. 创建、查看、打印变量](#-22-创建-查看-打印变量-)
+  - [2.2. 变量的管理](#-22-变量的管理-)
   - [2.3. 数组变量](#-23-数组变量-)
   - [2.4. 相关命令](#-24-相关命令-)
+  - [2.5. 特殊变量](#-25-特殊变量-)
 - [3. 表达式](#-3-表达式-)
   - [3.1. 数值操作数](#-31-数值操作数-)
   - [3.2. 操作符](#-32-操作符-)
@@ -31,10 +32,9 @@
 - [4. 字符串,  列表,  字典](#-4-字符串--列表--字典-)
   - [4.1. 字符串](#-41-字符串-)
     - [4.1.1. 字符串命令`string`](#-411-字符串命令string)
-    - [4.1.2. 创建字符串](#-412-创建字符串-)
-    - [4.1.3. 解析字符串](#-413-解析字符串-)
-    - [4.1.4. 正则表达式](#-414-正则表达式-)
-    - [4.1.5. 二进制字符串](#-415-二进制字符串-)
+    - [4.1.2. 格式化字符串](#-412-格式化字符串-)
+    - [4.1.3. 模式匹配](#-413-模式匹配-)
+    - [4.1.4. 二进制字符串](#-414-二进制字符串-)
   - [4.2. 列表 list](#-42-列表-list-)
     - [4.2.1. 创建 list](#-421-创建-list-)
     - [4.2.2. 取值](#-422-取值-)
@@ -85,8 +85,8 @@
 ## 1.2. 常用命令
 * 创建变量、赋值: `set 变量 值`
 * 查看变量: `set 变量`
-* 打印变量: `puts 变量`
-* 运行表达式: `expr 表达式`
+* 打印变量: `puts $变量`
+* 运行表达式: `expr 表达式/数学函数`
 * 运行脚本: `source 脚本.tcl`
 * 查看帮助: `help 命令`
 
@@ -107,19 +107,20 @@
 ### 1.3.3. 反斜杠`\`替换
 * 向单词中插入TCL中的特殊字符, 如 `[`, `$`, ` `(空格)
 * TCL支持的`\`序列
-    | 转义表达式 |       定义       |
-    | :--------: | :--------------: |
-    |     \a     |    警告 (0x7)    |
-    |     \b     |    删除 (0x8)    |
-    |     \f     |   换页符 (0xc)   |
-    |     \n     |   换行符 (0xa)   |
-    |     \r     |    回车 (0xd)    |
-    |     \t     |   制表符 (0x9)   |
-    |     \v     | 垂直制表符 (0xb) |
-    |    \ooo    |      八进制      |
-    |    \xhh    |     十六进制     |
-    |   \uhhhh   |     unicode      |
-    |    \\\\    |        \         |
+    | 转义表达式 |           定义            |
+    | :--------: | :-----------------------: |
+    |     \a     |        警告 (0x7)         |
+    |     \b     |        删除 (0x8)         |
+    |     \f     |       换页符 (0xc)        |
+    |     \n     |       换行符 (0xa)        |
+    |     \r     |        回车 (0xd)         |
+    |     \t     |       制表符 (0x9)        |
+    |     \v     |     垂直制表符 (0xb)      |
+    |   \空格    | 空格本身 (区别于命令间隔) |
+    |    \\\\    |             \             |
+    |    \ooo    |          八进制           |
+    |    \xhh    |         十六进制          |
+    |   \uhhhh   |          unicode          |
 
 * 在行尾表示命名没有结束, 下一行继续
 
@@ -164,12 +165,14 @@
 * ==无类型==
     * 内部保存为: 整数, 实数, 名称, 列表, Tcl 脚本等
 
-## 2.2. 创建、查看、打印变量
+## 2.2. 变量的管理
 ```tcl
-set  变量 值    # 创建变量、赋值
-set  变量       # 查看变量
-puts 变量       # 打印变量
+set   变量  值  # 创建变量、赋值
+set   变量      # 查看变量
+puts  $变量     # 打印变量
+unset 变量      # 删除变量
 ```
+
 ## 2.3. 数组变量
 * 数组变量: `数组名(元素名)`, 数组名和元素名必须一起使用, 如:
     ```tcl
@@ -179,20 +182,25 @@ puts 变量       # 打印变量
 * 多维数组: `数组名(元素名,元素名,...)`
     * 注意: `matrix(1,1)` 和 `matrix(1, 1)` 是不同的, 最好不使用空格
 * 如果数组声明时不存在, 会自动创建
+* 访问元素: `$数组名(元素名字符串)` 或 `$数组名($元素名变量)`
+    * 注意: 元素名如果是变量, 也需要变量替换
 * 管理数组: `array option arrayName ?arg arg ...?`
-    * `array anymore arrayName searchId`: 是否还有元素,
-        * `searchId`必须是`array startserach`的返回值
-    * `array donesearch arrayName searchId`: 中止搜索, 并销毁所有状态, 返回空字符串, 当一个搜索完成时一定要注意调用这个命令
-    * `array exists arrayName`: 指定的数组是否是否存
-    * `array get arrayName ?pattern?`: 返回 (元素名,值) 的列表, 数据对的顺序没有规律,`pattern` 参数限定搜索范围 (用string match的匹配规则)
-    * `array names arrayName ?mode? ?pattern?`: 返回数组中和`pattern`匹配的元素的名字组成的一个list, 如果没有`pattern`参数, 返回所有元素; 如果数组中没有匹配的元素或者`arrayName`不是数组的名字, 返回空字符串
-    * `array nextelement arrayName searchId`: 返回下一个元素, 如果搜索完则返回空字符串
-        * 注意: 如果对`arrayName`的元素进行了添加或删除, 所有的搜索都会自动结束, 如同调用了命令`array donesearch`, 并导致`array nextelement`操作失败
-    * `array set arrayName list`: 设置数组中元素的值, list := (元素名,值), 如果`arrayName`不存在, 自动创建
-    * `array size arrayName`: 返回数组元素的个数
-    * `array startsearch arrayName`: 搜索, 返回搜索标识 (用于命令`array nextelement`、`array anymore`和`array donesearch`)
-    * `array statistics arrayName`: 返回数组的统计信息
-    * `array unset arrayName ?pattern?`: 删除数组
+    * 查找
+        * `array startsearch arrayName`: 搜索, 返回搜索标识 (用于命令`array nextelement`、`array anymore`和`array donesearch`)
+        * `array nextelement arrayName searchId`: 返回下一个元素, 如果搜索完则返回空字符串
+            * 注意: 如果对`arrayName`的元素进行了添加或删除, 所有的搜索都会自动结束, 如同调用了命令`array donesearch`, 并导致`array nextelement`操作失败
+        * `array anymore arrayName searchId`: 是否还有元素,
+            * `searchId`必须是`array startserach`的返回值
+        * `array donesearch arrayName searchId`: 中止搜索, 并销毁所有状态, 返回空字符串, 当一个搜索完成时一定要注意调用这个命令
+    * 信息
+        * `array exists arrayName`: 指定的数组是否是存在
+        * `array size arrayName`: 返回数组元素的个数
+        * `array names arrayName ?mode? ?pattern?`: 返回数组中和`pattern`匹配的元素的名字组成的一个list, 如果没有`pattern`参数, 返回所有元素; 如果数组中没有匹配的元素或者`arrayName`不是数组的名字, 返回空字符串
+        * `array statistics arrayName`: 返回数组的统计信息
+    * 维护
+        * `array get arrayName ?pattern?`: 返回 (元素名,值) 的列表, 数据对的顺序没有规律,`pattern` 参数限定搜索范围 (用string match的匹配规则)
+        * `array set arrayName list`: 设置数组中元素的值, list := (元素名,值), 如果`arrayName`不存在, 自动创建
+        * `array unset arrayName ?pattern?`: 删除数组
 
 ## 2.4. 相关命令
 * 创建/修改变量: `set 变量 值`
@@ -201,14 +209,24 @@ puts 变量       # 打印变量
 * 变量增加或减小: `incr 变量 自然数`
 * 将文本添加到变量后: `append 变量 文本`
 
+## 2.5. 特殊变量
+* `argvO`: 脚本文件名
+* `argv`: 参数列表
+* `argc`: 命令行参数的个数
+* `env`: TCL预定义变量, 数组变量, 元素是所有过程的环境变量
+    * 如 `env(home)`, `env(HOME)`, `env(LANG)`, `env(PROCESSOR_IDENTIFIER)`, `env(TEMP)`, `env(USERNAME)`, `env(COMPUTERNAME)`, `env(OS)`, `env(Path)` ...
+    * 可用 `foreach {i} [array names env] {puts "$i = $env($i)"}` 命令打印全部元素名
+* `tcl_platform`: TCL预定义变量, 数组变量
+    * 元素名包括: `osVersion`, `pointerSize`, `byteOrder`, `threaded`, `machine`, `platform`, `os`, `user`, `wordSize`, ...
+    * 可用 `foreach {i} [array names tcl_platform] {puts "$i = $tcl_platform($i)"}` 命令打印全部元素名
+* `tcl_version`: TCL预定义变量, real, 版本信息
+
 --------------------------------------------------------------------------------
 # 3. 表达式
 
 ## 3.1. 数值操作数
-* 整数
-    * 十进制, 二进制 (`0b`开头), 八进制数 (`0o`开头), 十六进制数 (`0x`开头)
-* 实数
-    * 浮点数, 科学计数法
+* 整数: 十进制, 二进制 (`0b`开头), 八进制数 (`0o`开头), 十六进制数 (`0x`开头)
+* 实数: 浮点数, 科学计数法
 
 ## 3.2. 操作符
 |  类型  |   语法    |     意义      | 操作数类型         |
@@ -243,58 +261,67 @@ puts 变量       # 打印变量
 |  选择  | a ? b : c |   选择运算    | a:int, real        |
 
 ## 3.3. 数学函数
-|     分类     | 函数                                                           |
-| :----------: | :------------------------------------------------------------- |
-|   类型转换   | int(x), double(i), bool (x)                                    |
-|     统计     | max(arg, ...), min(arg, ...)                                   |
-| 绝对值与近似 | abs(x), round(x), ceil(x), floor(x)                            |
-|   乘方开方   | pow(x, y), sqrt(x), exp(x), log(x), log10(x), hypot(x, y)      |
-|     取余     | fmod(x, y)                                                     |
-| 三角与反三角 | sin(x), cos(x), tan(x), asin(x), acos(x), atan(x), atan2(x, y) |
-|     双曲     | sinh(x), cosh(x), tanh(x)                                      |
-|     随机     | rand(), srand(x)                                               |
+|     分类     | 函数                                                                         |
+| :----------: | :--------------------------------------------------------------------------- |
+|   类型转换   | `int(x)`, `wide(x)`, `double(i)`, `bool(x)`                                  |
+|     统计     | `max(arg, ...)`, `min(arg, ...)`                                             |
+| 绝对值与近似 | `abs(x)`, `round(x)`, `ceil(x)`, `floor(x)`                                  |
+|   乘方开方   | `pow(x, y)`, `sqrt(x)`, `exp(x)`, `log(x)`, `log10(x)`, `hypot(x, y)`        |
+|     取余     | `fmod(x, y)`                                                                 |
+| 三角与反三角 | `sin(x)`, `cos(x)`, `tan(x)`, `asin(x)`, `acos(x)`, `atan(x)`, `atan2(x, y)` |
+|     双曲     | `sinh(x)`, `cosh(x)`, `tanh(x)`                                              |
+|     随机     | `rand()`, `srand(x)`                                                         |
+
+* 整数转实数: `double`
+* 实数转整数:
+    * `int`: 转为机器字长
+    * `wide`: 转为 64 位
+    * `entier`: 转为适当长度的整数, 可以占用任意长度的存储空间, 保证能存放完整的值
 
 ## 3.4. 表达式
 ``` tcl
 expr {数学表达式}
+expr {数学函数}
 ```
 --------------------------------------------------------------------------------
 # 4. 字符串,  列表,  字典
 
 ## 4.1. 字符串
 * 两个双引号`"` 内的文本
+* 索引: 0 based
+    * 可以是: `整数`, `整数 ± 整数`, `end`, `end ± 整数`
 
 ### 4.1.1. 字符串命令`string`
-* 取得字符串元素或长度
-    * `string index string charIndex`: 返回第 `charIndex` (0-based) 个字符 , `charIndex` 可以是: `整数`, `end`, `end ± 整数`
-    * `string range string first last`:  返回字符串中从 first ~ last (0-based) 的子字符串, 如果 first < 0, 被当作 0; 如果 last 大于或等于总长度, 被当作 end; 如果 first 大于 last, 返回空
+* 取得字符串
+    * `string index string charIndex`: 返回第 `charIndex` 个字符
+    * `string range string first last`:  返回范围为 $[first, last]$ 的子字符串
+        * 若 first < 0, first 被当作 0;
+        * 若 last ≥ 总长度, last 被当作 `end`;
+        * 若 first > last, 返回空
+* 字符串长度
     * `string length string`: 返回字符串长度
 * 修改字符串
-    * `string repeat string count`: 返回重复后的字符串
+    * `string repeat string count`: 重复字符串
     * `string reverse string`: 翻转字符串
     * `string toupper/tolower/totitle string ?first? ?last?`: 转为大写/小写/句首大写
-    * `string trim/trimleft/trimright string ?chars?`: 从字符串的首尾/左侧/右侧删除字符集合 [chars] 中的字符, 如果没有给出 [chars], 将删除掉 spaces、tabs、newlines、carriage returns 这些字符
+    * `string trim/trimleft/trimright string ?chars?`: 从首尾/左侧/右侧剪裁 `chars`
+        * 如果没有指定 `chars`, 将删除 spaces, tabs, newlines, carriage returns 等字符
 * 简单搜索
-    * `string first/last needleString haystackString ?startIndex?`: 在`haystackString`中从头/尾查找与`needleString`匹配的字符序列, 返回第一个字母所在的位置(0-based), 如果没有找到, 返回 -1
+    * `string first/last needleString haystackString ?startIndex?`: 从 `haystackString` 头/尾查找字符串 `needleString`
+        * 返回第一个字母的索引, 如果没有找到则返回 -1
     * `string wordstart/wordend string charIndex`: 返回首/未个 word
 * 字符串比较
     * `string compare ?-nocase? ?-length int? string1 string2`: 比较字符串
-        * 返回值:
-            * -1: 字符串1 < 字符串2
-            * 0: 字符串1 = 字符串2
-            * -1: 字符串1 > 字符串2
+        * 若相同, 返回 0
+        * 若 `string1` 在字典中先于 `string2`, 返回 -1; 否则返回 1
         * `-nocase`: 不区分大小写
         * `-length`: 只比较前 `int` 个字符, 如果 `int` 为负数则忽略
     * `string equal ?-nocase? ?-length int? string1 string2`: 两个字符串是否相同
+        * 某些时候可以用 `expr string1 eq/ne string2`
 * 字符串置换
-    * `string replace string first last ?newstring?`: 替换字符串中 first ~ last (0-based) 的字符, 如果没有 newstring 参数, 删除 first ~ last 的字符
+    * `string replace string first last ?newstring?`: 替换字符串中 $[first, last]$ 的字符
+        * 如果没有指定 `newstring`, 则删除字符
     * `string map ?-nocase? mapping string`: 字典替换, `mapping` 可以是 `{原字符串 替换字符串}`
-* 通配符样式的模式匹配
-    * `string match ?-nocase? pattern string`: 是否匹配
-        * `*`: 任意长的任意字符串, 包括空字符串
-        * `?`: 任意单个字符
-        * `[chars]`: 字符集合中的任意字符, 可以使用 A-Z 这种形式
-        * `\x`: 单个字符, 转义 `*`,`-`,`[`,`]`
 * 字符串类型
     * `string is class ?-strict? ?-failindex varname? string`: 判断字符串类型
         * class
@@ -323,19 +350,45 @@ expr {数学表达式}
         * `-strict`: 空字符串将返回 0, 如果不指定该选项, 将总是返回 1
         * `-failindex`: If specified, then if the function returns 0, the index in the  string  where the class was no longer valid will be stored in the variable named varname.  The varname  will  not  be set if the function returns 1.
 
-### 4.1.2. 创建字符串
-* `format formatString ?arg arg ...?`
+### 4.1.2. 格式化字符串
+* 创建: `format formatString ?arg arg ...?`
     * 类似 C 语言的 `printf`
-
-### 4.1.3. 解析字符串
-* 扫描字符串: `scan string format ?varName varName ...?`
+* 扫描: `scan string format ?varName varName ...?`
     * 类似 C 语言的 `scanf`
 
-### 4.1.4. 正则表达式
-* 匹配: `regexp ?switches? exp string ?matchVar? ?subMatchVar subMatchVar ...?`
-* 替换: `regsub ?switches? exp string subSpec ?varName?`
+### 4.1.3. 模式匹配
+* 通配符: `string match ?-nocase? pattern string`
+    * `?`: 任意单个字符
+    * `*`: 任意长的任意字符串, 包括空字符串
+    * `[chars]`: 字符集合中的任意字符, 可以使用 A-Z 这种形式
+    * `\x`: 单个字符, 转义 `*`,`-`,`[`,`]`
 
-### 4.1.5. 二进制字符串
+* 正则表达式: 支持基本正则表达式(BRE), 扩展正则表达式 (ERE) 和高级正则表达式 (ARE)
+    * 匹配: `regexp ?switches? exp string ?matchVar? ?subMatchVar subMatchVar ...?`
+    * 替换: `regsub ?switches? exp string subSpec ?varName?`
+    > 参见文件 "TCL_TK Command Reference Guide.pdf"
+    * 可用 `[[类型1][类型2]]` 表示多个系列的匹配项
+    * 也可用 `[:class:]` 表示一系列类型
+        | Class   | Description                                                                                                  |
+        | ------- | ------------------------------------------------------------------------------------------------------------ |
+        | alnum   | Unicode alphabet or digit characters, `[[:alpha:][:digit:]]`                                                 |
+        | alpha   | Unicode alphabet characters `[[:lower:][:upper:]]`                                                           |
+        | ascii   | Characters `[\u0000-\u007f]` (7-bit ASCII) (machine specific)                                                |
+        | blank   | Space or tab characters (not used by string is)                                                              |
+        | boolean | true or false, 0 or 1, yes or no, on or off (string is only)                                                 |
+        | control | Unicode control characters true true, 1, yes, on (string is only)                                            |
+        | digit   | Unicode digit charactes (not limited to [0-9])                                                               |
+        | double  | Valid Tcl form of double (string is only) wideinteger Valid Tcl wide integer. (string is only)               |
+        | false   | false, 0, no, off (string is only) wordchar Unicode word characters, `[[:alnum:][:punct:]]` (string is only) |
+        | graph   | Unicode printing characters, except space xdigit hexadecimal digit characters `[[0-9][A-F][a-f]]`            |
+        | integer | Valid Tcl form of integer (string is only)                                                                   |
+        | lower   | Unicode lower-case alphabet characters                                                                       |
+        | print   | Unicode printing characters, including space                                                                 |
+        | punct   | Unicode punctuation characters (non-alnum or space) (string is only)                                         |
+        | space   | Unicode white-space characters [\f\n\r\t\v ]                                                                 |
+        | upper   | Unicode upper-case alphabet characters                                                                       |
+
+### 4.1.4. 二进制字符串
 * `binary format formatString ?arg arg ...?`
 * `binary scan string formatString ?varName varName ...?`
 
