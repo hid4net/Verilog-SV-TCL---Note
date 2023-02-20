@@ -46,6 +46,7 @@
   - [4.5. 变换函数](#-45-变换函数-)
   - [4.6. 文件输入/输出](#-46-文件输入输出-)
     - [4.6.1. 读取CSV](#-461-读取csv-)
+    - [4.6.2. 相对路径](#-462-相对路径-)
   - [4.7. 值变转储 (VCD) 文件](#-47-值变转储-vcd-文件-)
   - [4.8. 时间标度](#-48-时间标度-)
   - [4.9. 时序检验](#-49-时序检验-)
@@ -688,22 +689,28 @@ defparam 参数名 = 参数值;
 
 ### 4.6.1. 读取CSV
 ``` verilog
-reg [8*100:1] string;
-integer sync_num;
-reg [127:0] tdata;
-reg is_sync;
-reg is_talst;
+reg [1 : 8*100] str;
+reg [63:0] tdata;
+reg talst;
 
 initial begin
-    fp = $fopen("./Stim_Dat.csv", "r");   // 打开文件
+    fp = $fopen("stim_dat", "r");   // 打开文件
 
-    $fgets(string, fp);   // 跳过文件头
-    $display("%s",string);
+    $fgets(str, fp);   // 跳过文件头
+    $display("%s",str);
 
-    $fscanf(fp, "%d,%h,%d,%d", sync_num, tdata, is_sync, is_talst); // 读取数据
-    $display("%d, %h, %d, %d",sync_num, tdata, is_sync,is_talst);
+    $fscanf(fp, "%d,%d,%d", tdata, talst, tuser); // 读取数据
+    $display("%d, %d, %d", tdata, talst, tuser);
 
     $fclose(fp);    // 关闭文件
+end
+```
+### 4.6.2. 相对路径
+``` verilog
+initial begin
+    fp = $fopen("stim_dat", "w");   // 写文件, 通过查文件位置, 确定相对路径的基点
+    $fdisplay("1234567890");
+    $fclose(fp);
 end
 ```
 

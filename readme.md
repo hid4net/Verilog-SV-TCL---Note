@@ -1,15 +1,16 @@
+<h1 style="text-align: center">Verilog, System Verilog, TCL 等语法的笔记</h1>
 
-# FPGA 设计总结
-- [x] 多时钟域整理
-- [ ] STA相关
-  - [x] 基本约束
-  - [ ] 多周期约束
-- [x] 整理FSM部分
+--------------------------------
+# 工具
+- vscode w/ "Markdown Preview Enhanced"
 
-# Verilog HDL 语法总结
-* 完结
+--------------------------------
+# TODO:
 
-# TCL 语法总结
+## Verilog
+- 完结
+
+## TCL
 - [ ] 列表
 - [ ] 字典
 - [ ] 流程控制
@@ -22,7 +23,7 @@
 - [ ] TCL 内部管理
 - [ ] 历史
 
-# System Verilog HDL 语法总结
+## System Verilog
 - [ ] 接口: interface ... endinterface, modport, import, export, clocking ... endclocking, global, forkjoin
 - [ ] class
 - [ ] ...
