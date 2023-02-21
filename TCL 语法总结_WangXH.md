@@ -36,13 +36,8 @@
     - [4.1.3. 模式匹配](#-413-模式匹配-)
     - [4.1.4. 二进制字符串](#-414-二进制字符串-)
   - [4.2. 列表 list](#-42-列表-list-)
-    - [4.2.1. 创建 list](#-421-创建-list-)
-    - [4.2.2. 取值](#-422-取值-)
-    - [4.2.3. 修改列表](#-423-修改列表-)
-    - [4.2.4. 从列表中取得元素](#-424-从列表中取得元素-)
-    - [4.2.5. 搜索](#-425-搜索-)
-    - [4.2.6. 排序](#-426-排序-)
-    - [4.2.7. 与字符串互换](#-427-与字符串互换-)
+    - [4.2.1. list 命令](#-421-list-命令-)
+    - [4.2.2. 与字符串互换](#-422-与字符串互换-)
   - [4.3. 字典](#-43-字典-)
 - [5. 流程控制](#-5-流程控制-)
   - [5.1. 条件控制](#-51-条件控制-)
@@ -105,7 +100,7 @@
     set 1bs [expr $kgrams*2.2046]   # 1bs: 44.092
     ```
 ### 1.3.3. 反斜杠`\`替换
-* 向单词中插入TCL中的特殊字符, 如 `[`, `$`, ` `(空格)
+* 向单词中插入TCL中的特殊字符, 如 `\[`, `\$`, `\(空格)`
 * TCL支持的`\`序列
     | 转义表达式 |           定义            |
     | :--------: | :-----------------------: |
@@ -289,9 +284,11 @@ expr {数学函数}
 ## 4.1. 字符串
 * 两个双引号`"` 内的文本
 * 索引: 0 based
-    * 可以是: `整数`, `整数 ± 整数`, `end`, `end ± 整数`
+    * 可以是: `整数`, `整数±整数`, `end`, `end±整数`
+        * `+`/`-` 前后不要有空格
 
 ### 4.1.1. 字符串命令`string`
+> 注: 命令中 _string_ 需要变量替换, _varName_ 是变量名, 不要变量替换
 * 取得字符串
     * `string index string charIndex`: 返回第 `charIndex` 个字符
     * `string range string first last`:  返回范围为 $[first, last]$ 的子字符串
@@ -395,51 +392,81 @@ expr {数学函数}
 ## 4.2. 列表 list
 * 表示集合, 由一堆元素组成的有序集合, 每个元素可以是任意字符串, 也可以是list, 如
     ``` tcl
-    {}          # 空list
-    a b c d     # 4个值的list
-    {a b c d}   # 1个值的list
-    {a {b c} d} # list可以嵌套
+    {}          # 空 list
+    {a b c d}   # 4 个值的 list
+    {a {b c} d} # list 可以嵌套
     ```
-### 4.2.1. 创建 list
-* 直接声明: `{元素, 元素,  ...}`
-* 命令创建, 语法: `list ?arg arg ...?`, 如
-    ``` tcl
-    list 1 2 {3 4}
-    # 返回: 1 2 {3 4}
-    ```
-* `concat ?arg arg ...?`: 返回合并的 list
-* `lrepeat number value ?value ...?`: 返回重复后的 list
 
-### 4.2.2. 取值
-* `lindex list index`: 返回第 index 个元素 (0-based)
-* `llength list`: 返回list的元素个数
+### 4.2.1. list 命令
+> 注: 命令中 _list_ 需要变量替换, _varName_ 是变量名, 不要变量替换
+* 创建
+    * 直接声明: `{元素 元素 ...}`
+        * 不能用逗号隔离, 逗号会被认为是字符的一部分
+    * 命令创建, 语法: `list ?arg arg ...?`, 如
+        ``` tcl
+        set a [list 1 2 3 4]    # a 是一个 4 元素的 list
+        set b [list 1 2 {3 4}]  # b 是一个 3 元素的 list
+        puts "llength \$a = [llength $a], llength \$b = [llength $b]"
+        # 输出: llength $a = 4, llength $b = 3
+        llength [lindex $b 2]   # 输出: 2
+        ```
+* 取值
+    * `lindex list ?index...?`: 返回第 index 个元素 (0-based)
+    * `lrange list first last`: 返回截取的 list, 可使用 `end`
+    * `lassign list varName ?varName ...?`: 将 list 中的元素依次赋给名为 varName 的变量
+        * 如果 varName 比列表长, 多余的 varName 被设为空字符串
+* 修改
+    * `lset varName ?index...? newValue`: 将 varName 列表中第 index 个元素换成新值
+    * `lappend varName ?value value value ...?`: 返回追加元素的 list, 如果 varName 不存在, 生成 list
+    * `linsert list index element ?element element ...?`: 返回插入元素到第 index 个元素之前的 list
+    * `concat ?arg arg ...?`: 返回合并的 list
+    * `lreplace list first last ?element element ...?`: 返回替换的 list, 如果没有 value 参数, 删除元素
+    * `lrepeat number element1 ?element2 element3 ...?`: 返回重复后的 list
+* 信息
+    * `llength list`: 返回 list 的元素个数
+* 搜索
+    * `lsearch ?options? list pattern`: 返回匹配的元素或 -1
+        * `options`:
+            * `-exact`: 精确匹配
+            * `-glob`: 默认模式, 方式与 `string match` 相同
+            * `-regexp`: 正规表达式匹配
+            * `-sorted`: 针对排好序的 list
+            </br>
+            * `-all`: 将所有匹配的元素组成一个 list 返回
+            * `-inline`: 返回元素而非索引
+            * `-not`: 取反
+            * `-start index`:
+            </br>
+            * `-ascii`: 元素被视为字符串, 默认模式
+            * `-nocase`: 忽略大小写
+            * `-dictionary`: 按字典排序, 与`-ascii`不同的地方是: 不考虑大小写, 数字被当作整数来排序
+            * `-integer`: 元素被视为整数
+            * `-real`: 元素被视为实数
+            </br>
+            * `-decreasing`:
+            * `-increasing`:
+            </br>
+            * `-index indexList`: 针对嵌套 list
+            * `-subindices`:
+* 排序
+    * `lsort ?options? list`: 返回排序后的列表
+        * `options`:
+            * `-ascii`: 按 ASCII 字符顺序排序, 默认模式
+            * `-dictionary`: 按字典排序, 与`-ascii`不同的地方是: 不考虑大小写, 数字被当作整数来排序
+            * `-integer`: 元素被视为实数整数
+            * `-real`: 元素被视为实数
+            * `-command command`:  按命令排序
+            * `-increasing`: 升序 (按 ASCII 字符比较)
+            * `-decreasing`: 降序 (按 ASCII 字符比较)
+            * `-indices`:
+            * `-index indexList`: 针对嵌套 list
+            * `-nocase`: 忽略大小写
+            * `-unique`: 删除重复项
 
-### 4.2.3. 修改列表
-* `linsert list index value ?value...?`: 返回插入元素到第 index (0-based) 个元素之前的list
-* `lreplace list first last ?value value ...?`: 返回替换的 list, 如果没有 value 参数, 删除元素
-* `lset varName ?index ...? newValue`: 将 varName 列表中第 index 个元素换成新值
-* `lappend varName value ?value...?`: 返回追加元素的 list, 如果 varName 不存在, 生成 list
-
-### 4.2.4. 从列表中取得元素
-* `lassign list varName ?varName...?`: 将 list 中的元素一次赋给名为 varName 的变量, 多余的 varName 被设为空字符串
-* `lrange list first last`: 返回截取的 list, last可以是: 整数, end
-
-### 4.2.5. 搜索
-* `lsearch ?-exact? ?-glob? ?-regexp? list pattern`: 返回匹配的元素或 -1, `-exact`: 精确匹配, `-glob`: 默认模式, 方式与 `string match` 相同, `-regexp`: 正规表达式匹配
-
-### 4.2.6. 排序
-* `lsort ?options? list`: 返回排序后的列表, options:
-    * `-ascii`: 按 ASCII 字符顺序排序, 默认模式
-    * `-dictionary`: 按字典排序, 与`-ascii`不同的地方是: 不考虑大小写, 数字被当作整数来排序
-    * `-integer`: 把 list 的元素转换成整数, 按整数排序
-    * `-real`: 把 list 的元素转换成浮点数, 按浮点数排序
-    * `-increasing`: 升序(按ASCII字符比较)
-    * `-decreasing`: 降序(按ASCII字符比较)
-    * `-command command`:  按命令排序
-
-### 4.2.7. 与字符串互换
-* `split string ?splitChars?`: 拆分字符串, 返回列表, 如果 splitChars 是空字符{}, 按字符分开, 如果 splitChars 没有给出,以空格为分隔符
-* `join list ?joinString?`: 将列表合并为字符串, 中间以 joinString 分开, 返回字符串, 缺省的 joinString 是空格
+### 4.2.2. 与字符串互换
+* `split string ?splitChars?`: 拆分字符串, 返回列表, 缺省的 `joinString` 是空格
+    * 如果 `splitChars` 是空字符`{}`, 按字符分开
+* `join list ?joinString?`: 将列表合并为字符串, 缺省的 `joinString` 是空格, 可以是 `{}`
 
 ## 4.3. 字典
 
