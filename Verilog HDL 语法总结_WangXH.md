@@ -191,6 +191,7 @@ xnor, xor
 * `[某位]`
 * `[高位 : 低位] ` 或 `[低位 : 高位]`
 * `[起始位 +: 宽度]` 或 ` [起始位 -: 宽度]`
+    * 在某些综合器中, 用 for 循环选范围时, 类似 `[i*8+7 : i*8]` 的写法会被报错: 边界不是常数. 改用 `[i*8+7 -:8]` 就可以
 
 ## 1.5. 值集合
 * **四种基本值**: `0, 1, X/x, Z/z/?`
@@ -201,7 +202,7 @@ xnor, xor
         |   1   |   x   |   1   |   x   |   1   |
         |   x   |   x   |   x   |   x   |   x   |
         |   z   |   0   |   1   |   x   |   z   |
-    * 其它类型请查阅 `EEE Std 1364-2001`
+    * 其它类型请查阅 `IEEE Std 1364-2001`
 * **整数**
     * 普通十进制数
     * 基数格式:
@@ -218,7 +219,7 @@ xnor, xor
     * 下划线可随意用在数字中, 仅为了便于阅读
 
 * **实数**
-    * 普通十进制数 (0.xx 可以省略 0, 用 .xx 表示)
+    * 普通十进制数 (`0.xx` 可以省略 0, 用 `.xx` 表示)
     * 支持`(e|E)`科学记数法
     * 下划线可随意用在数字中, 仅为了便于阅读
 
@@ -248,8 +249,8 @@ xnor, xor
 
 ## 1.7. 参数
 ``` verilog
-(parameter|localparam) [signed] [范围] 参数列表
-(parameter|localparam) (integer|real|realtime|time) 参数列表
+(parameter|localparam) [signed] [范围] 参数列表;
+(parameter|localparam) (integer|real|realtime|time) 参数列表;
 ```
 
 ## 1.8. 属性
@@ -258,18 +259,36 @@ xnor, xor
 * 如果没有指定值, 默认 = 1
 
 ## 1.9. 模块与端口
-``` verilog
-module <module_name> (
-   input  [线网类型] [signed] [范围] <input_port_name>,
-   // ...<other_inputs>...
-   output [线网类型] [signed] [范围] <output_port_name>,
-   output [reg] [signed] [范围] <output_port_name>,
-   output [integer|time] <output_port_name>,
-   // ...<other_outputs>...
-   inout  [线网类型] [signed] [范围] <inout_port_name>,
-   // ...<other_inouts>...
-);
-```
+* 不带参数的模块声明
+    ``` verilog
+    module <module_name> (
+        input  [线网类型] [signed] [范围] <input_port_name>,
+        // ...<other_inputs>...
+        output [线网类型] [signed] [范围] <output_port_name>,
+        output [reg] [signed] [范围] <output_port_name>,
+        output [integer|time] <output_port_name>,
+        // ...<other_outputs>...
+        inout  [线网类型] [signed] [范围] <inout_port_name>,
+        // ...<other_inouts>...
+    );
+    ```
+* 带参数的模块声明
+    ``` verilog
+    module <module_name> #(
+        parameter [signed] [范围] 参数列表,
+        parameter (integer|real|realtime|time) 参数列表,
+        // ...<other_parameter>...
+    ) (
+        input  [线网类型] [signed] [范围] <input_port_name>,
+        // ...<other_inputs>...
+        output [线网类型] [signed] [范围] <output_port_name>,
+        output [reg] [signed] [范围] <output_port_name>,
+        output [integer|time] <output_port_name>,
+        // ...<other_outputs>...
+        inout  [线网类型] [signed] [范围] <inout_port_name>,
+        // ...<other_inouts>...
+    );
+    ```
 * 层次路径: `第一层模块名.第2层模块名.第n层模块名.元素`
 
 ## 1.10. 门级/结构建模
@@ -447,8 +466,8 @@ disable 块名称
 ``` verilog {.line-numbers}
 //--------------------------------
 // 循环生成
-genvar 变量;
 generate
+    genvar 变量;
     for (变量=0; 变量 < 上限; 变量=变量+1)
         ...
 endgenerate
@@ -469,18 +488,10 @@ generate
     endcase
 endgenerate
 ```
+* `generate` 用于生成代码块, 因此内部必须是 `always` 或 `assign` 语句
 
 ## 1.13. 任务和函数
 ``` verilog {.line-numbers}
-//--------------------------------
-// 传统格式
-task [automatic] 任务名;
-    input  数据类型 端口名称,
-    output 数据类型 端口名称
-    begin
-        ...
-    end
-endtask
 //--------------------------------
 // ANSI 格式
 task [automatic] 任务名(
@@ -491,21 +502,30 @@ task [automatic] 任务名(
         ...
     end
 endtask
-```
-``` verilog {.line-numbers}
 //--------------------------------
 // 传统格式
-function [automatic | signed] 数据类型 函数名;
-    input 数据类型 端口名称,
+task [automatic] 任务名;
+    input  数据类型 端口名称,
+    output 数据类型 端口名称
     begin
         ...
     end
-endfunction
+endtask
+```
+``` verilog {.line-numbers}
 //--------------------------------
 // ANSI 格式
 function [automatic | signed] 数据类型 函数名(
     input 数据类型 端口名称,
 );
+    begin
+        ...
+    end
+endfunction
+//--------------------------------
+// 传统格式
+function [automatic | signed] 数据类型 函数名;
+    input 数据类型 端口名称,
     begin
         ...
     end
@@ -532,13 +552,13 @@ endfunction
 
 ## 2.2. 强行赋值
 ``` verilog
-assign ... deassign
-force ... release
+assign ... deassign // 仅用于 reg 型变量
+force ... release   // 可用于 reg 和 wire 型变量
 ```
 
 ## 2.3. 改写参数
 ``` verilog
-defparam 参数名 = 参数值;
+defparam 参数名 = 参数值;  // 很多综合器已不支持, 仿真器还支持
 ```
 
 --------------------------------------------------------------------------------
@@ -652,7 +672,7 @@ defparam 参数名 = 参数值;
 * 格式化数据到字符串:
     * `字符串任务名 (output_reg, list_of_arguments)`
         * 字符串任务名: `$swrite | $swriteb | $swriteh | $swriteo`
-    * `$sformat (output_reg, format, list_of_arguments)`
+    * `integer length = $sformat (output_reg, format, list_of_arguments)`
 * 写入文件: `写文件任务 (文件指针, 格式说明1, 参数列表1, 格式说明2, 参数列表2, ... );`
     * `$fdisplay`, `$fdisplayb`, `$fdisplayh`, `$fdisplayo`
     * `$fwrite`, `$fwriteb`, `$fwriteh`, `$fwriteo`
@@ -691,7 +711,8 @@ defparam 参数名 = 参数值;
 ``` verilog
 reg [1 : 8*100] str;
 reg [63:0] tdata;
-reg talst;
+reg talst, tuser;
+integer fp, fp_code;
 
 initial begin
     fp = $fopen("stim_dat", "r");   // 打开文件
@@ -699,9 +720,15 @@ initial begin
     $fgets(str, fp);   // 跳过文件头
     $display("%s",str);
 
-    $fscanf(fp, "%d,%d,%d", tdata, talst, tuser); // 读取数据
-    $display("%d, %d, %d", tdata, talst, tuser);
-
+    begin: break
+        while(1) begin
+            fp_code = $fscanf(fp, "%d,%d,%d", tdata, talst, tuser); // 读取数据, 成功返回 1; 失败返回 0; 文件尾返回 -1
+            if (fp_code == -1)
+                disable break;  // 结束读取
+            else
+                $display("%d, %d, %d", tdata, talst, tuser);
+        end
+    end
     $fclose(fp);    // 关闭文件
 end
 ```
