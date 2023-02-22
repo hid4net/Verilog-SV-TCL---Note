@@ -7,7 +7,7 @@
 <!-- code_chunk_output -->
 
 - [1. 基本语法](#-1-基本语法-)
-  - [1.1. 一切皆命令](#-11-一切皆命令-)
+  - [1.1. 一切皆命令 (字符串)](#-11-一切皆命令-字符串-)
   - [1.2. 常用命令](#-12-常用命令-)
   - [1.3. 三种替换](#-13-三种替换-)
     - [1.3.1. 变量替换](#-131-变量替换-)
@@ -39,16 +39,18 @@
     - [4.2.1. list 命令](#-421-list-命令-)
     - [4.2.2. 与字符串互换](#-422-与字符串互换-)
   - [4.3. 字典](#-43-字典-)
+    - [4.3.1. 字典命令](#-431-字典命令-)
 - [5. 流程控制](#-5-流程控制-)
   - [5.1. 条件控制](#-51-条件控制-)
   - [5.2. 循环控制](#-52-循环控制-)
   - [5.3. 运行语句: eval](#-53-运行语句-eval-)
   - [5.4. 运行脚本: source](#-54-运行脚本-source-)
 - [6. 过程](#-6-过程-)
-  - [6.1. 过程定义和返回值](#-61-过程定义和返回值-)
+  - [6.1. 声明与调用](#-61-声明与调用-)
   - [6.2. 局部变量和全局变量](#-62-局部变量和全局变量-)
   - [6.3. 缺省参数和可变个数参数](#-63-缺省参数和可变个数参数-)
   - [6.4. 引用: upvar](#-64-引用-upvar-)
+  - [6.5. uplevel 命令](#-65-uplevel-命令-)
 - [7. 命名空间](#-7-命名空间-)
 - [8. 访问文件](#-8-访问文件-)
   - [8.1. 文件名](#-81-文件名-)
@@ -66,7 +68,7 @@
 
 --------------------------------------------------------------------------------
 # 1. 基本语法
-## 1.1. 一切皆命令
+## 1.1. 一切皆命令 (字符串)
 * 命令格式: `命令 参数1 参数2 ...`
 * Tcl 脚本包含一条或更多的命令, 命令通过换行符或分号隔开, 如
     ``` tcl
@@ -202,7 +204,11 @@ unset 变量      # 删除变量
 * 查看变量: `set 变量`
 * 移除变量: `unset 变量` 或 `array unset`
 * 变量增加或减小: `incr 变量 自然数`
-* 将文本添加到变量后: `append 变量 文本`
+* 将值 (字符串, 变量替换) 添加到变量后: `append 变量 值`, 示例
+    ```tcl
+    set v1 1; set v2 2
+    append v1 $v2   # 输出 12, v1 也变为 12
+    ```
 
 ## 2.5. 特殊变量
 * `argvO`: 脚本文件名
@@ -469,13 +475,55 @@ expr {数学函数}
 * `join list ?joinString?`: 将列表合并为字符串, 缺省的 `joinString` 是空格, 可以是 `{}`
 
 ## 4.3. 字典
-
+* 类似于偶数个元素的列表, 奇数个元素是键, 偶数个元素是值
+* 字典可以嵌套, 如
+    ```tcl
+    set employees {
+        0001 {
+            firstnarne  Joe
+            surname     Schrnoe
+            title       Mr
+        }
+        1234 {
+            firstnarne  Ann
+            initial     E
+            surname     Huan
+            title       Miss
+        }
+    puts [dict get [dict get $employees 1234] firstname] # 输出: Ann
+    ```
+### 4.3.1. 字典命令
+> 其中 `dictionaryVariable` 是字典名, 不需要变量替换; `dictionaryValue` 是字典变量, 需要变量替换
+* 创建
+    * `dict create ?key value ...?`: 根据 key-value 对创建词典, 有多个重复的 key 时, 采用最后一个
+    * `dict filter dictionaryValue filterType arg ?arg ...?`: 过滤 dict, 返回匹配的 key-value
+* 取值
+    * `dict get dictionaryValue ?key ...?`: 根据 key 取值
+    * `dict for {keyVar valueVar} dictionaryValue body`: 列举 key-value
+        * 与 `foreach` 相似, 也可以使用 `continue` 和 `break`
+    * `dict keys dictionaryValue ?globPattern?`: 列举 key
+    * `dict values dictionaryValue ?globPattern?`: 列举 value
+    * `dict with dictionaryVariable ?key ...? body`: 使用脚本处理嵌套 dict
+* 修改
+    * `dict set dictionaryVariable key ?key ...? value`: 添加或修改
+    * `dict unset dictionaryVariable key ?key ...?`: 删除
+    * `dict append dictionaryVariable key ?string ...?`: 添加 key-value
+    * `dict lappend dictionaryVariable key ?value ...?`: 为某个 key 附加一个或多个 value (列表)
+    * `dict incr dictionaryVariable key ?increment?`: 增加某个 key 的 value
+    * `dict update dictionaryVariable key varName ?key varName ...? body`: 使用脚本处理 key-value
+    * `dict merge ?dictionaryValue ...?`: 合并词典, 有多个重复的 key 时, 采用最后一个
+    * `dict replace dictionaryValue ?key value ...?`: 替换, 有多个重复的 key 时, 采用最后一个
+    * `dict remove dictionaryValue ?key ...?`: 删除某个 key, 删除不存在的 key 时, 不会报错
+* 信息
+    * `dict size dictionaryValue`: 字典的尺寸
+    * `dict exists dictionaryValue key ?key ...?`: 是否存在 key
+    * `dict info dictionaryValue`: 打印 dict 的信息
 
 --------------------------------------------------------------------------------
 # 5. 流程控制
 
 ## 5.1. 条件控制
-* **if** 分支, 语法: `if expr1 ?then? body1 elseif expr2 ?then? body2 elseif ...?else? ?bodyN?`
+* **if** 分支, 语法: `if expr1 ?then? body1 elseif expr2 ?then? body2 elseif ... ?else? ?bodyN?`
     ``` tcl
     if {条件1} {
         代码
@@ -491,6 +539,8 @@ expr {数学函数}
         代码
     }
     ```
+    * `then` 可以省略
+    * 建议总是把表达式和脚本放在大括号中, 这样直到命令执行前都不会有替换
     * `{` 一定要写在上一行, 否则 Tcl 解释器会认为 if 命令在换行符处结束, 下一行会被当成新的命令
 * **switch** 分支
     * 语法: `switch ?options? string pattern body ?pattern body ...?`
@@ -503,9 +553,10 @@ expr {数学函数}
         * `-matchvar varName`:
         * `-indexvar varName`:
         * `--`: options 的结束
+    * 分支中 `-` 表示与下个分支一起执行脚本
     * 示例
         ``` tcl
-        switch 变量替换 {
+        switch 选项 变量替换 {
             值1 -   # 运行和下一个值相同的代码
             值2 代码2
             值3 代码3
@@ -532,12 +583,23 @@ expr {数学函数}
             代码
         }
         ```
-    * 语法: `foreach varlist1 list1 ?varlist2 list2 ...? body`
+    * 语法: `foreach varlist1 list1 ?varlist2 list2 ...? body`: 每次循环都会依次把元素值赋给对应的变量
         ``` tcl
-        foreach {变量或变量列表1} {列表1} {变量或变量列表2} {列表2} {
+        foreach {变量或变量列表1} {列表1} {变量或变量列表2} {列表2} ... {
             代码
         }
         ```
+        ```tcl
+        # 示例
+        foreach i {a b} {j k} {v w x y z} {
+            puts "i:<$i>, j:<$j>, k:<$k> "
+        }
+        # 输出:
+        # i:<a>, j:<v>, k:<w>
+        # i:<b>, j:<x>, k:<y>
+        # i:<>, j:<z>, k:<>
+        ```
+
 * **break** 和 **continue**
     * 与C语言相同
 
@@ -545,37 +607,47 @@ expr {数学函数}
 * 语法: `eval arg ?arg ...?`
 
 ## 5.4. 运行脚本: source
-* 语法: `source ?-encoding encodingName? FileName`, 如
+* 语法: `source  [-encoding <arg>] [-notrace] [-quiet] [-verbose] <file>`, 如
     ``` tcl
-    source e:/tcl&c/hello.tcl
+    source ./hello.tcl
     ```
+* 可用绝对路径, 也可用相对路径
+* 返回值: 文件内容的返回值, 即文件中最后一条命令的返回值
+* 支持 `return`
+
 --------------------------------------------------------------------------------
 # 6. 过程
 
-## 6.1. 过程定义和返回值
-* 类似 C 语言中的函数, 可以像固有命令一样调用, 语法: `proc name args body`
+## 6.1. 声明与调用
+* 类似 C 语言中的函数, 语法: `proc name args body`
     ``` tcl
-    proc 过程名 {参数列表}{
+    # 声明
+    proc 过程名 {参数列表} {
         代码
     }
+    # 调用
+    过程名 参数1 参数2 ...
     ```
-    * 参数之间用空格隔开
-    * 可以利用 `return` 在代码的任何地方中断过程, 并返回值
-    如:
     ``` tcl
-    # 1
+    # 示例
+    proc add {x y} {expr $x+$y}
+    add 1 2 # 输出 3
+    ```
+* 参数之间用空格隔开
+* 可以利用 `return` 在代码的任何地方中断过程, 并返回值, 如:
+    ``` tcl
+    # 示例
     proc abs {x} {
         if { $x >= 0 } {
             return $x
         }
         return [expr -$x]
     }
-    # 2
-    proc add {x y } {expr $x+$y}
     ```
+* 调用时, 参数个数需和声明的个数一致
+
 ## 6.2. 局部变量和全局变量
-* 局部变量: 在过程中定义的变量, 只能在过程中被访问, 退出时被自动删除
-* 全局变量: 在所有过程之外定义的变量
+* 局部变量 vs 全局变量
     * 局部变量和全局变量可以同名
 * 作用域:
     * 局部变量的作用域在过程内部
@@ -594,12 +666,16 @@ expr {数学函数}
     sample 3 # 输出 8
     set a    # a = 5
     ```
+
 ## 6.3. 缺省参数和可变个数参数
-* **无参**, 例如 `proc add {} { expr 2+3 }`
-* **缺省参数**
-    * 有缺省值的参数只能位于参数列表的后部
-    如:
+* **无参**, 如
+    ```tcl
+    # 示例
+    proc add {} { expr 2+3 }
+    ```
+* **缺省参数**: 有缺省值的参数只能位于参数列表的后部
     ``` tcl
+    # 示例
     proc add {val1 {val2 2} {val3 3}}{
         expr $val1 + $val2 + $val3
     }
@@ -607,11 +683,11 @@ expr {数学函数}
     # add 2 20  # 值为 25
     # add 4 5 6 # 值为 15
     ```
-* **可变个数参数**
-    * 最后一个参数是 args, 局部变量 args 将会被设置为一个列表, 如果没有附加的变量, args 就设置成一个空串
-    * 位于 args 以前的参数是普通参数
-    如
+* **可变个数参数**: 最后一个参数用 `args`
+    * 局部变量 `args` 将会被设置为一个列表, 如果没有附加的变量, `args` 就设置成一个空串
+    * 位于 `args` 以前的参数是普通参数
     ``` tcl
+    # 示例
     proc add { val1 args } {
         set sum $val1
         foreach i $args {
@@ -622,14 +698,15 @@ expr {数学函数}
     # add 2         # 值为 2
     # add 2 3 4 5 6 # 值为 20
     ```
+
 ## 6.4. 引用: upvar
 * 对全局变量或其他过程中的局部变量进行访问
 * 使用 `upvar` 绑定, 语法: `upvar ?level? otherVar myVar ?otherVar myVar ...?`
-    * 参数 level表: 调用 upvar 命令的过程相对于希望引用的变量 myVar 在调用栈中相对位置
-        * level 的默认值为1, 即可以访问当前过程的调用者中的变量
-        * 如果要访问全局变量, level 为 `#0`
-        如:
+    * 参数 `level` 表: 调用 `upvar` 命令的过程相对于希望引用的变量 myVar 在调用栈中相对位置
+        * `level` 的默认值为 1, 即可以访问当前过程的调用者中的变量
+        * 如果要访问全局变量, `level` 为 `#0`
         ``` tcl
+        # 示例
         upvar 2 other x     # 可以访问当前过程的调用者的调用者中的变量 other
         upvar #0 other x    # 可以访问全局变量 other
         ```
@@ -650,6 +727,9 @@ expr {数学函数}
     # myexp 7   # 输出 13
     ```
     > upvar 把 $arg (实际上是过程 myexp 中的变量 a) 和过程 temp 中的变量 b 绑定, 对b的读写就相当于对 a 的读写
+
+## 6.5. uplevel 命令
+*
 
 --------------------------------------------------------------------------------
 # 7. 命名空间
