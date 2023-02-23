@@ -31,7 +31,7 @@
     - [1.12.5. 分支语句](#-1125-分支语句-)
     - [1.12.6. 循环语句](#-1126-循环语句-)
     - [1.12.7. 语句块](#-1127-语句块-)
-    - [1.12.8. 生成](#-1128-生成-)
+    - [1.12.8. 生成 (generate)](#-1128-生成-generate-)
   - [1.13. 任务和函数](#-113-任务和函数-)
 - [2. 仿真与建模语法](#-2-仿真与建模语法-)
   - [2.1. 延时](#-21-延时-)
@@ -191,7 +191,7 @@ xnor, xor
 * `[某位]`
 * `[高位 : 低位] ` 或 `[低位 : 高位]`
 * `[起始位 +: 宽度]` 或 ` [起始位 -: 宽度]`
-    * 在某些综合器中, 用 for 循环选范围时, 类似 `[i*8+7 : i*8]` 的写法会被报错: 边界不是常数. 改用 `[i*8+7 -:8]` 就可以
+    * 在某些综合器中, 用 `for` 循环选范围时, 类似 `[i*8+7 : i*8]` 的写法会被报错: _边界不是常数_. 改用 `[i*8+7 -:8]` 就可以
 
 ## 1.5. 值集合
 * **四种基本值**: `0, 1, X/x, Z/z/?`
@@ -458,11 +458,11 @@ join
 //--------------------------------
 // 禁用语句块
 ...
-disable 块名称
+disable 块名称  // 多用于仿真控制
 ...
 ```
 
-### 1.12.8. 生成
+### 1.12.8. 生成 (generate)
 ``` verilog {.line-numbers}
 //--------------------------------
 // 循环生成
@@ -488,7 +488,36 @@ generate
     endcase
 endgenerate
 ```
-* `generate` 用于生成代码块, 因此内部必须是 `always` 或 `assign` 语句
+* `generate` 用于生成代码块, 因此内部必须是"电路", 即去掉 `generate` 也能正常表达的描述, 如模块例化、`always/initial` 语句、 `assign` 语句、...
+* 当多个 `always` 或 `assign` 都有相同的操作时, 用 `generate` 更高效
+    ```verilog
+    // 示例 1: for
+    always @ (posedge clk) begin
+        for (i = 0; i < 8; i = i + 1) begin
+            a[8*i+7 -:8] <= b[8*i +: 8];
+        end
+    end
+
+    always @ (posedge clk) begin
+        for (i = 0; i < 8; i = i + 1) begin
+            x[i] <= x[i-1];
+        end
+    end
+
+    // 示例 2: generate for
+    generate
+        genvar i;
+        for (i = 0; i < 8; i = i + 1)
+            always @ (posedge clk) begin
+                a[8*i+7 -:8] <= b[8*i +: 8];
+            end
+
+            always @ (posedge clk) begin
+                x[i] <= x[i-1];
+            end
+        end
+    endgenerate
+    ```
 
 ## 1.13. 任务和函数
 ``` verilog {.line-numbers}
@@ -709,28 +738,49 @@ defparam 参数名 = 参数值;  // 很多综合器已不支持, 仿真器还支
 
 ### 4.6.1. 读取CSV
 ``` verilog
-reg [1 : 8*100] str;
-reg [63:0] tdata;
-reg talst, tuser;
-integer fp, fp_code;
-
-initial begin
-    fp = $fopen("stim_dat", "r");   // 打开文件
-
-    $fgets(str, fp);   // 跳过文件头
-    $display("%s",str);
-
-    begin: break
-        while(1) begin
-            fp_code = $fscanf(fp, "%d,%d,%d", tdata, talst, tuser); // 读取数据, 成功返回 1; 失败返回 0; 文件尾返回 -1
-            if (fp_code == -1)
-                disable break;  // 结束读取
-            else
-                $display("%d, %d, %d", tdata, talst, tuser);
+module axis_dat_model (
+    /// ---------------- clock and reset ----------------
+    input             clk,
+    /// ---------------- ports ----------------
+    output reg        tvalid = 0,
+    output reg [31:0] tdata = 0,
+    output reg        tlast = 0
+);
+    /// ---------------- 全局变量 ----------------
+    integer fp;
+    /// ---------------- task: 初始化文件 ----------------
+    task init(input [1:8*100] file_name);   // 可用于适时调用新文件
+        begin
+            fp = $fopen(file_name, "r");    // 打开文件
         end
-    end
-    $fclose(fp);    // 关闭文件
-end
+    endtask
+    /// ---------------- task: 读取数据 ----------------
+    task read_dat;
+        reg     [1 : 8*100] str;
+        integer             fp_code;
+        begin
+            /// ---------------- 跳过前几行 (如: csv 文件头) ----------------
+            repeat(1) $fgets(str, fp);
+            /// ---------------- before reading data ----------------
+            tvalid = 0; @(posedge clk); #1;
+            /// ---------------- read data ----------------
+            begin: BREAK
+                while (1) begin
+                    // 读取数据, 成功返回 1; 失败返回 0; 文件尾返回 -1
+                    fp_code = $fscanf(fp, "%d,%d,%d", tdata, talst, tuser);
+                    if (fp_code == -1) begin
+                        disable BREAK;  // 结束读取
+                    end else begin
+                        tvalid = 1; @(posedge clk); #1;
+                    end
+                end
+            end
+            /// ---------------- after reading data ----------------
+            $fclose(fp);  // 关闭文件
+            tvalid = 0; @(posedge clk); #1;
+        end
+    endtask
+endmodule
 ```
 ### 4.6.2. 相对路径
 ``` verilog
