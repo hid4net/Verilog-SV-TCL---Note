@@ -56,11 +56,11 @@
   - [7.2. 其他命令](#-72-其他命令-)
   - [7.3. 命令集合](#-73-命令集合-)
 - [8. 访问文件](#-8-访问文件-)
-  - [8.1. 文件名](#-81-文件名-)
-  - [8.2. 基本文件输入输出命令](#-82-基本文件输入输出命令-)
-  - [8.3. 随机文件访问](#-83-随机文件访问-)
-  - [8.4. 当前工作目录](#-84-当前工作目录-)
-  - [8.5. 文件操作和获取文件信息](#-85-文件操作和获取文件信息-)
+  - [8.1. 路径管理](#-81-路径管理-)
+  - [8.2. 目录管理](#-82-目录管理-)
+  - [8.3. 文件管理](#-83-文件管理-)
+  - [8.4. 文件操作](#-84-文件操作-)
+  - [8.5. 特殊文件的操作](#-85-特殊文件的操作-)
 - [9. 进程间通信](#-9-进程间通信-)
 - [10. 错误与异常](#-10-错误与异常-)
 - [11. 创建和使用脚本](#-11-创建和使用脚本-)
@@ -821,13 +821,142 @@ expr {数学函数}
 
 --------------------------------------------------------------------------------
 # 8. 访问文件
+* 路径: windows 和 linux 不同, 在 windows 中为了避免和 `\` 冲突, 需要使用 `\\` 转义
+* TCL 默认使用 linux 路径样式
 
-## 8.1. 文件名
-* 在表示文件的目录结构时它使用`/`, 而不是 `\`
+## 8.1. 路径管理
+* 获取路径
+    * `pwd`: 返回当前目录的完整路径
+    * `file normalize name`: 返回规则的路径名
+    * `file nativename name`: 返回平台特定的文件名, 在 windows 中返回 windows 样式的路径名
+    * `file rootname name`: 返回路径主干 (即: 删除路径中最后的扩展名)
+    * `file extension name`: 返回路径的扩展名
+    * `file dirname name`: 返回路径所在目录
+    * `file tail name`: 返回路径的最后一个元素, 文件全名或最后一级目录
+    * `file split name`: 分割路径, 返回列表
+    * `file separator ?name?`: 返回路径分隔符
+    * `file readlink name`: 返回目录/文件的链接路径
+* 切换路径
+    * `cd ?dirName?`: 切换路径
+        * 如果不指定 `dirName`, 会切换到 HOME 路径 (即 `$env(HOME)`)
+* 创建/修改路径
+    * `file link ?-linktype? linkName ?target?`: 创建链接
+    * `file join name ?name ...?`: 拼接路径
+* 信息
+    * `file exists name`: 路径是否存在
+    * `file isdirectory name`: 路径是否为目录
+    * `file isfile name`: 路径是否为文件
+    * `file executable name`: 路径是否可运行
+    * `file readable name`: 路径是否可读
+    * `file writable name`: 路径是否可写
+    * `file pathtype name`: 路径的绝对/相对类型: `absolute`, `relative`, `volumerelative`
+    * `file type name`: 返回路径的类型: `file`, `directory`, `characterSpecial`, `blockSpecial`, `fifo`, `link`, or `socket`
+    * `file system name`: 路径的系统属性, 返回一个 2 元素的列表, 第一个是文件系统的名称, 第二个是磁盘格式
+    * `file volumes`: 磁盘中所有的卷
+* 获取文件或目录列表
+    * `glob ?switches? pattern ?pattern ...?`: 返回匹配这个 (些) 模式的所有文件的列表
+        * switches:
+            |      `switches`      | 说明                                                                                                                                                      |
+            | :------------------: | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+            | -directory directory | 指定目录                                                                                                                                                  |
+            |        -join         | 匹配所有 pattern                                                                                                                                          |
+            |     -nocomplain      | 允许返回一个空串, 没有`-nocomplain`时, 如果结果是空的, 就返回错误                                                                                         |
+            |   -path pathPrefix   | 限定路径, 不要和 -directory 混用                                                                                                                          |
+            |        -tails        | 仅返回最后一级目录                                                                                                                                        |
+            |        -types        | 限定文件类型: b (block special file), c (character special file), d (directory),  f  (plain  file),  l (symbolic  link),  p  (named  pipe), or s (socket) |
+            |          --          | 结束 `switches` , 即后面以 `-` 开头的参数将不作为switches                                                                                                 |
+        * 允许使用 `{}` 或 `[]`
+            ``` tcl
+            # ------------ 示例 ------------
+            glob {{src,backup}/*.[ch]}  # 输出: src/main.c src/hash.c src/hash.h backup/hash.c
+            # 等价于
+            glob {src/*.[ch]} {backup/*.[ch]}
+            # 等价于
+            glob {src/*.h} {src/*.h} {backup/*.c} {backup/*.h}
+            ```
+        * 模式以 `/` 结束, 那将只匹配目录名
+            ``` tcl
+            # ------------ 示例 ------------
+            glob */ # 返回当前目录的所有子目录
+            ```
 
-## 8.2. 基本文件输入输出命令
-* 基本示例
+## 8.2. 目录管理
+* 创建与删除
+    * `file mkdir dir ?dir ...?`: 创建目录
+    * `file delete ?-force? ?--? pathname ?pathname ... ?`: 删除文件或目录
+        * 批量删除: 先使用 `glob` 命令返回列表，然后使用参数展开语法把列表元素作为独立参数提供给 `file delete`, 即 `file delete {*} [glob 类型]`
+        * 使用 `-force` 才能删除非空目录, 且递归删除
+* 复制/移动/重命名
+    * `file copy ?-force? ?--? source target`: 复制文件或目录
+      `file copy ?-force? ?--? source ?source ...? targetDir`: 复制文件或目录到一个目录中
+      * 使用 `-force` 覆盖已存在的文件
+    * `file rename ?-force? ?--? source target`: 重命名
+      `file rename ?-force? ?--? source ?source ...? targetDir`: 重命名
+      * 使用 `-force` 覆盖已存在的文件
+
+## 8.3. 文件管理
+* 创建与删除
+    * `file delete ?-force? ?--? pathname ?pathname ... ?`: 删除文件或目录
+        * 批量删除: 先使用 `glob` 命令返回列表，然后使用参数展开语法把列表元素作为独立参数提供给 `file delete`, 即 `file delete {*} [glob 类型]`
+* 复制/移动/重命名
+    * `file copy ?-force? ?--? source target`: 复制文件或目录
+      `file copy ?-force? ?--? source ?source ...? targetDir`: 复制文件或目录到一个目录中
+      * 使用 `-force` 覆盖已存在的文件
+    * `file rename ?-force? ?--? source target`: 重命名
+      `file rename ?-force? ?--? source ?source ...? targetDir`: 重命名
+      * 使用 `-force` 覆盖已存在的文件
+* 属性
+    * `file atime name ?time?`: 返回文件最后被 access 的时间, 标准时间秒数
+    * `file mtime name ?time?`: 返回文件最后被 modify 的时间, 标准时间秒数
+    * `file attributes name`
+      `file attributes name ?option?`
+      `file attributes name ?option value option value...?`: 返回文件属性, 支持的属性有
+        * linux: `-group`, `-owner` `-permissions` `-readonly`
+        * windows: `-archive`, `-hidden` `-longname` `-readonly` `-shortname` `-system`
+    * `file stat name varName`: 获取文件信息, `varName` 可以是: `atime`, `ctime`, `dev`, `gid`, `ino`, `mode`, `mtime`, `nlink`, `size`, `type`, `uid`
+    * `file lstat name varName`: 与`stat`类似, 用于链接路径
+    * `file owned name`: 是否允许访问
+    * `file size name`: 返回文件尺寸
+* 文件/管道列表
+    * `file channels ?pattern?`: 列举标准输入输出、文件等通道
+
+
+## 8.4. 文件操作
+* 打开/关闭文件
+    * `open name ?access?`: 打开, 返回文件标识。如果`name`的第一个字符是 `| `, 管道命令被触发, 而非打开文件
+        | 打开方式 `access` | 说明                                                   |
+        | :---------------: | ------------------------------------------------------ |
+        |         r         | 只读, 默认方式, 文件须已存在                           |
+        |        r+         | 读写, 文件须已存在                                     |
+        |         w         | 只写, 如果文件存在则清空文件, 否则创建新的空文件       |
+        |        w+         | 读写, 如果文件存在则清空文件, 否则创建新的空文件       |
+        |         a         | 只写, 文件须存在, 并把指针指向文件尾                   |
+        |        a+         | 只读, 并把指针指向文件尾; 如文件不存在, 创建新的空文件 |
+    * `close ?fileId?`: 关闭文件, 返回空字符串
+* 文件标识: 用于标识打开的文件的字符串
+    * 三个特定的文件标识: `stdin`, `stdout` 和 `stderr`
+* 读取
+    * `read ?-nonewline? fileId`: 读并返回文件中所有剩下的字节, 如果没有 `nonewline` 开关, 则在换行符处停止
+    * `read fileId numBytes`: 从文件中读并返回 numbytes 字节
+    * `gets fileId ?varName?`: 获取下一行, 忽略换行符。如果有 varName 就把该行赋给它, 并返回该行的字符数 (文件尾返回-1) ; 如果没有 varName 参数, 返回文件的下一行 (文件尾返回空字符串)
+* 写入
+    * `puts ?-nonewline? ?fileId? string`: 写 string 到文件中, 如果没有 nonewline 开关, 添加换行符
+        * 默认是 `stdout`, 返回空字符串
+        * 使用 C 的标准 I/O 库的缓冲区方案
+    * `flush fileId`: 把缓冲区内容写到文件中, 返回空字符串
+        * 直到数据被写完才返回, 当文件关闭时自动 `flush`
+* 文件定位
+    * `seek fileId offset ?origin?`: 把文件的访问点设置为相对于 `origin` 偏移量为 `offset` 的位置
+        | `origin` | 说明         |
+        | :------: | ------------ |
+        |  start   | 文件头, 默认 |
+        | current  | 当前位置     |
+        |   end    | 文件尾       |
+    * `tell fileId`: 返回当前访问的位置
+    * `eof fileId`: 是否到文件尾
+* 示例
     ``` tcl
+    # ------------ 示例 ------------
     proc tgrep { pattern filename} {
         set f [open $filename r]
         while { [gets $f line ] } {
@@ -838,104 +967,15 @@ expr {数学函数}
         close $f
     }
     ```
-* 基本命令
-    * `open name ?access?`: 打开路径为`name`的文件, 返回文件标识。如果`name`的第一个字符是 `| `, 管道命令被触发, 而非打开文件
-        * 文件的打开方式 `access`:
-            * `r` 只读, 默认方式, 文件须已存在
-            * `r+` 读写, 文件须已存在
-            * `w` 只写, 如果文件存在则清空文件, 否则创建新的空文件
-            * `w+` 读写, 如果文件存在则清空文件, 否则创建新的空文件
-            * `a` 只写, 文件须存在, 并把指针指向文件尾
-            * `a+` 只读, 并把指针指向文件尾; 如文件不存在, 创建新的空文件
-    * `gets fileId ?varName?`: 获取下一行, 忽略换行符。如果有 varName 就把该行赋给它, 并返回该行的字符数 (文件尾返回-1) ; 如果没有 varName 参数, 返回文件的下一行 (文件尾返回空字符串)
-    * `read ?-nonewline? fileId`: 读并返回文件中所有剩下的字节, 如果没有nonewline开关, 则在换行符处停止
-    * `read fileId numBytes`: 从文件中读并返回 numbytes 字节
-    * `puts ?-nonewline? ?fileId? string`: 写 string 到文件中, 如果没有 nonewline 开关, 添加换行符 </br> 默认是 stdout, 返回空字符串 </br> 使用 C 的标准 I/O 库的缓冲区方案
-    * `flush fileId`: 把缓冲区内容写到文件中, 返回空字符串 </br> 直到数据被写完才返回, 当文件关闭时自动 flush
-    * `close ?fileId?`: 关闭文件, 返回空字符串
-* 文件标识: 一个字符串用于标识打开的文件, Tcl有三个特定的文件标识: `stdin`, `stdout` 和 `stderr`, 分别对应标准输入、标准输出和错误通道
-* Tcl 中对串口、管道、`socket` 等的操作和对文件的操作类似
+* Tcl 中对串口、管道、socket 等的操作和对文件的操作类似
 
-## 8.3. 随机文件访问
-* 默认文件输入输出方式是连续的
-    * 每个 `gets` 或 `read` 命令返回的是访问位置后面的字节
-    * 每个 `puts` 命令写数据是接着上次写的位置接着写
-    * `seek`, `tell` 和 `eof` 等命令使用户可以非连续访问文件
-        * `seek fileId offset ?origin?`: 把文件的访问点设置为相对于 origin 偏移量为 offset 的位置. origin 可以是 start (默认), current, end, 分别对应文件头、当前位置、文件尾  返回空字符串
-        * `tell fileId`: 返回当前访问位置
-        * `eof fileId`: 是否到文件尾, 返回 1 or 0
-
-## 8.4. 当前工作目录
-* `pwd`
-    * 没有参数, 返回当前目录的完整路径
-* `cd`
-    * 使用一个参数, 可以把工作目录改变为参数提供的目录
-    * 不使用参数, 把工作目录变为启动 Tcl 脚本的用户的工作目录, Windows 下会把工作目录变为 window s操作系统的安装目录所在的盘的根目录 (如: C:/)
-
-## 8.5. 文件操作和获取文件信息
-* `glob ?switches? pattern ?pattern ...?`: 返回匹配这个 (些) 模式的所有文件的列表
-    * switches:
-        * `-nocomplain`: 允许返回一个空串, 没有`-nocomplain`时, 如果结果是空的, 就返回错误
-        * `--`: 表示 switches 结束, 即后面以 `-` 开头的参数将不作为switches
-    * 采用 `string match` 命令的匹配规则, 例如:
-        ``` tcl
-        # ------------ 示例 ------------
-        glob *.c *.h    # 输出: main.c hash.c hash.h
-        ```
-    * 允许模式中包含括在`{}`中间以逗号分开的多种选择, 如:
-        ``` tcl
-        # ------------ 示例 ------------
-        glob {{src,backup}/*.[ch]}  # 输出: src/main.c src/hash.c src/hash.h backup/hash.c
-        # 等价于
-        glob {src/*.[ch]} {backup/*.[ch]}
-        ```
-    * 模式以 `/` 结束, 那将只匹配目录名, 如:
-        ``` tcl
-        # ------------ 示例 ------------
-        glob */ # 返回当前目录的所有子目录
-        ```
-    * 如果 glob 返回的文件名列表为空, 通常会产生一个错误
-        * 但是 glob 的在样式参数之前的第一个参数是 `-nocomplain` 的话, 这时即使结果为空, 也不会产生错误
-* `file`: 可以用来进行文件操作也可以检索文件信息
-    * `file atime name ?time?`: 返回文件最后被修改的时间, 标准时间秒数
-    * `file attributes name`
-      `file attributes name ?option?`
-      `file attributes name ?option value option value...?`: 返回文件属性, 支持的属性有
-        * linux: `-group`, `-owner` `-permissions` `-readonly`
-        * windows: `-archive`, `-hidden` `-longname` `-readonly` `-shortname` `-system`
-    * `file channels ?pattern?`: 列举标准输入输出、文件等通道
-    * ==`file copy ?-force? ?--? source target`==
-      ==`file copy ?-force? ?--? source ?source ...? targetDir`: 复制文件或目录==
-    * ==`file delete ?-force? ?--? pathname ?pathname ... ?`: 删除文件或目录==
-    * ==`file dirname name`: 获取所在目录==
-    * `file executable name`: 当前文件是否可运行
-    * ==`file exists name`: 当前文件是否存在==
-    * `file extension name`: 返回当前文件的扩展名
-    * `file isdirectory name`: 当前路径是否为目录
-    * `file isfile name`: 当前路径是否为文件
-    * ==`file join name ?name ...?`: 拼接路径==
-    * `file link ?-linktype? linkName ?target?`: 创建链接
-    * `file lstat name varName`: 与`stat`类似, 用于链接路径
-    * ==`file mkdir dir ?dir ...?`: 创建目录==
-    * `file mtime name ?time?`: 返回文件最后被修改的时间, 十进制文本
-    * `file nativename name`: 返回平台特定的文件名
-    * `file normalize name`: 返回规则的路径名
-    * `file owned name`: 是否允许访问
-    * `file pathtype name`: 当前路径的类型: 绝对, 相对, 卷相对
-    * `file readable name`: 是否可读
-    * `file readlink name`: 返回当前路径的链接路径
-    * ==`file rename ?-force? ?--? source target`==
-      ==`file rename ?-force? ?--? source ?source ...? targetDir`: 重命名==
-    * `file rootname name`: 返回路径主干 (即: 删除路径中最后的扩展名)
-    * `file separator ?name?`: 返回路径分隔符
-    * `file size name`: 返回文件尺寸
-    * `file split name`: 分割路径, 返回列表
-    * `file stat name varName`: 获取文件信息, `varName` 可以是: `atime`, `ctime`, `dev`, `gid`, `ino`, `mode`, `mtime`, `nlink`, `size`, `type`, `uid`
-    * `file system name`: 系统属性, 返回一个 2 元素的列表, 第一个是文件系统的名称, 第二个是磁盘格式
-    * `file tail name`: 路径的最后一个元素
-    * `file type name`: 返回文件的类型: `file`, `directory`, `characterSpecial`, `blockSpecial`, `fifo`, `link`, or `socket`
-    * `file volumes`: 各卷的路径
-    * `file writable name`: 文件是否可写
+## 8.5. 特殊文件的操作
+* 字符集: 默认 utf-8
+    * `chan configure channelId -encoding 字符集`: 改变字符集编解码
+* 二进制文件:
+    * 转换格式: `chan configure channelId -translation binary`
+    * 读取: `read ...` + `binary scan ...`
+    * 写入: `binary format ...` + `puts -nonewline ...`
 
 --------------------------------------------------------------------------------
 # 9. 进程间通信
