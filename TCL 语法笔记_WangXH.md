@@ -7,7 +7,7 @@
 <!-- code_chunk_output -->
 
 - [1. 基本语法](#-1-基本语法-)
-  - [1.1. 一切皆命令 (字符串)](#-11-一切皆命令-字符串-)
+  - [1.1. 一切皆命令/字符串](#-11-一切皆命令字符串-)
   - [1.2. 常用命令](#-12-常用命令-)
   - [1.3. 三种替换](#-13-三种替换-)
     - [1.3.1. 变量替换](#-131-变量替换-)
@@ -22,8 +22,7 @@
   - [2.1. 简单变量](#-21-简单变量-)
   - [2.2. 变量的管理](#-22-变量的管理-)
   - [2.3. 数组变量](#-23-数组变量-)
-  - [2.4. 相关命令](#-24-相关命令-)
-  - [2.5. 特殊变量](#-25-特殊变量-)
+  - [2.4. 特殊变量](#-24-特殊变量-)
 - [3. 表达式](#-3-表达式-)
   - [3.1. 数值操作数](#-31-数值操作数-)
   - [3.2. 操作符](#-32-操作符-)
@@ -31,7 +30,7 @@
   - [3.4. 表达式](#-34-表达式-)
 - [4. 字符串,  列表,  字典](#-4-字符串--列表--字典-)
   - [4.1. 字符串](#-41-字符串-)
-    - [4.1.1. 字符串命令`string`](#-411-字符串命令string)
+    - [4.1.1. 字符串命令](#-411-字符串命令-)
     - [4.1.2. 格式化字符串](#-412-格式化字符串-)
     - [4.1.3. 模式匹配](#-413-模式匹配-)
     - [4.1.4. 二进制字符串](#-414-二进制字符串-)
@@ -51,7 +50,11 @@
   - [6.3. 缺省参数和可变个数参数](#-63-缺省参数和可变个数参数-)
   - [6.4. 引用: upvar](#-64-引用-upvar-)
   - [6.5. uplevel 命令](#-65-uplevel-命令-)
+  - [6.6. 匿名过程](#-66-匿名过程-)
 - [7. 命名空间](#-7-命名空间-)
+  - [7.1. 基础](#-71-基础-)
+  - [7.2. 其他命令](#-72-其他命令-)
+  - [7.3. 命令集合](#-73-命令集合-)
 - [8. 访问文件](#-8-访问文件-)
   - [8.1. 文件名](#-81-文件名-)
   - [8.2. 基本文件输入输出命令](#-82-基本文件输入输出命令-)
@@ -68,10 +71,11 @@
 
 --------------------------------------------------------------------------------
 # 1. 基本语法
-## 1.1. 一切皆命令 (字符串)
+## 1.1. 一切皆命令/字符串
 * 命令格式: `命令 参数1 参数2 ...`
-* Tcl 脚本包含一条或更多的命令, 命令通过换行符或分号隔开, 如
+* Tcl 脚本包含一条或更多的命令, 命令通过换行符或分号隔开
     ``` tcl
+    # ------------ 示例 ------------
     set a 1
     set b 2
     # 或
@@ -82,22 +86,34 @@
 ## 1.2. 常用命令
 * 创建变量、赋值: `set 变量 值`
 * 查看变量: `set 变量`
+* 移除变量: `unset 变量`
+    * 复杂类型有 `array unset`, `dict unset`, ...
 * 打印变量: `puts $变量`
 * 运行表达式: `expr 表达式/数学函数`
-* 运行脚本: `source 脚本.tcl`
+* 变量增加或减小: `incr 变量 自然数`
+* 将值 (字符串, 变量替换) 添加到变量后: `append 变量 值`
+    ```tcl
+    # ------------ 示例 ------------
+    set v1 1; set v2 2
+    append v1 $v2   # 输出 12, v1 也变为 12
+    ```
+* 运行脚本: `source 脚本路径`
 * 查看帮助: `help 命令`
+* 获取信息: `info`
 
 ## 1.3. 三种替换
 ### 1.3.1. 变量替换
-* 引用变量的值 `$变量`, 如
+* 引用变量的值 `$变量`, 为了区分变量名和变量值
     ```tcl
+    # ------------ 示例 ------------
     set kgrams 20
     expr $kgrams * 2.2046   # 结果: 44.092
     puts "kgrams = $kgrams" # 输出: kgrams = 20
     ```
 ### 1.3.2. 命令替换
-* 用命令替换某个参数: `[命令]`, 如:
+* 用命令代替某个参数: `[命令]`
     ```tcl
+    # ------------ 示例 ------------
     set kgrams 20
     set 1bs [expr $kgrams*2.2046]   # 1bs: 44.092
     ```
@@ -127,8 +143,9 @@
     * 如果参数不以双引号开始, 那么其中的双引号被当作普通字符
 * 双引号`"`引用的参数中, 空格、制表符以及分号都被当做普通字符
     * `\"`被当作字符双引号
-* 变量替换、命令替换以及反斜杠替换在双引号中正常进行, 如
+* 变量替换、命令替换以及反斜杠替换在双引号中正常进行
     ```tcl
+    # ------------ 示例 ------------
     set a 2.1
     set msg "a is $a; the square of a is [expr $a * $a]"
     # 输出: a is 2.1; the square of a is 4.41
@@ -138,15 +155,18 @@
 * 取消所有字符的特殊意义
 
 ## 1.5. 参数展开
-* `{*}`之后紧跟着非空白字符, 如
+* `{*}`之后紧跟着非空白字符
     ``` tcl
+    # ------------ 示例 ------------
     file delete {*} [glob *.o]
     # 等效于
     file delete a.o b.o c.o
     ```
 ## 1.6. 注释
-* `#`, 必须出现在 Tcl 解释器期望命令的第一个字符出现的地方, 如
+* `#`, 必须出现在 Tcl 解释器期望命令的第一个字符出现的地方
+* 不能使用行尾注释
     ```tcl
+    # ------------ 示例 ------------
     # 整行注释
     set a 100   # 这里的文字会被当做参数, 会报错
     set b 101;  # 行尾注释, 需要加分号
@@ -199,18 +219,7 @@ unset 变量      # 删除变量
         * `array set arrayName list`: 设置数组中元素的值, list := (元素名,值), 如果`arrayName`不存在, 自动创建
         * `array unset arrayName ?pattern?`: 删除数组
 
-## 2.4. 相关命令
-* 创建/修改变量: `set 变量 值`
-* 查看变量: `set 变量`
-* 移除变量: `unset 变量` 或 `array unset`
-* 变量增加或减小: `incr 变量 自然数`
-* 将值 (字符串, 变量替换) 添加到变量后: `append 变量 值`, 示例
-    ```tcl
-    set v1 1; set v2 2
-    append v1 $v2   # 输出 12, v1 也变为 12
-    ```
-
-## 2.5. 特殊变量
+## 2.4. 特殊变量
 * `argvO`: 脚本文件名
 * `argv`: 参数列表
 * `argc`: 命令行参数的个数
@@ -293,7 +302,7 @@ expr {数学函数}
     * 可以是: `整数`, `整数±整数`, `end`, `end±整数`
         * `+`/`-` 前后不要有空格
 
-### 4.1.1. 字符串命令`string`
+### 4.1.1. 字符串命令
 > 注: 命令中 _string_ 需要变量替换, _varName_ 是变量名, 不要变量替换
 * 取得字符串
     * `string index string charIndex`: 返回第 `charIndex` 个字符
@@ -396,8 +405,9 @@ expr {数学函数}
 * `binary scan string formatString ?varName varName ...?`
 
 ## 4.2. 列表 list
-* 表示集合, 由一堆元素组成的有序集合, 每个元素可以是任意字符串, 也可以是list, 如
+* 表示集合, 由一堆元素组成的有序集合, 每个元素可以是任意字符串, 也可以是list
     ``` tcl
+    # ------------ 示例 ------------
     {}          # 空 list
     {a b c d}   # 4 个值的 list
     {a {b c} d} # list 可以嵌套
@@ -408,8 +418,9 @@ expr {数学函数}
 * 创建
     * 直接声明: `{元素 元素 ...}`
         * 不能用逗号隔离, 逗号会被认为是字符的一部分
-    * 命令创建, 语法: `list ?arg arg ...?`, 如
+    * 命令创建, 语法: `list ?arg arg ...?`
         ``` tcl
+        # ------------ 示例 ------------
         set a [list 1 2 3 4]    # a 是一个 4 元素的 list
         set b [list 1 2 {3 4}]  # b 是一个 3 元素的 list
         puts "llength \$a = [llength $a], llength \$b = [llength $b]"
@@ -476,8 +487,9 @@ expr {数学函数}
 
 ## 4.3. 字典
 * 类似于偶数个元素的列表, 奇数个元素是键, 偶数个元素是值
-* 字典可以嵌套, 如
+* 字典可以嵌套
     ```tcl
+    # ------------ 示例 ------------
     set employees {
         0001 {
             firstnarne  Joe
@@ -590,7 +602,7 @@ expr {数学函数}
         }
         ```
         ```tcl
-        # 示例
+        # ------------ 示例 ------------
         foreach i {a b} {j k} {v w x y z} {
             puts "i:<$i>, j:<$j>, k:<$k> "
         }
@@ -607,8 +619,9 @@ expr {数学函数}
 * 语法: `eval arg ?arg ...?`
 
 ## 5.4. 运行脚本: source
-* 语法: `source  [-encoding <arg>] [-notrace] [-quiet] [-verbose] <file>`, 如
+* 语法: `source  [-encoding <arg>] [-notrace] [-quiet] [-verbose] <file>`
     ``` tcl
+    # ------------ 示例 ------------
     source ./hello.tcl
     ```
 * 可用绝对路径, 也可用相对路径
@@ -629,14 +642,14 @@ expr {数学函数}
     过程名 参数1 参数2 ...
     ```
     ``` tcl
-    # 示例
+    # ------------ 示例 ------------
     proc add {x y} {expr $x+$y}
     add 1 2 # 输出 3
     ```
 * 参数之间用空格隔开
-* 可以利用 `return` 在代码的任何地方中断过程, 并返回值, 如:
+* 可以利用 `return` 在代码的任何地方中断过程, 并返回值
     ``` tcl
-    # 示例
+    # ------------ 示例 ------------
     proc abs {x} {
         if { $x >= 0 } {
             return $x
@@ -654,9 +667,8 @@ expr {数学函数}
     * 全局变量的作用域不包括过程的内部
         * 在过程内部引用全局变量: `global` 命令
     > 和C语言有很大的不同
-
-    如
     ``` tcl
+    # ------------ 示例 ------------
     set a 4
     proc sample { x } {
         global a
@@ -670,12 +682,12 @@ expr {数学函数}
 ## 6.3. 缺省参数和可变个数参数
 * **无参**, 如
     ```tcl
-    # 示例
+    # ------------ 示例 ------------
     proc add {} { expr 2+3 }
     ```
 * **缺省参数**: 有缺省值的参数只能位于参数列表的后部
     ``` tcl
-    # 示例
+    # ------------ 示例 ------------
     proc add {val1 {val2 2} {val3 3}}{
         expr $val1 + $val2 + $val3
     }
@@ -687,7 +699,7 @@ expr {数学函数}
     * 局部变量 `args` 将会被设置为一个列表, 如果没有附加的变量, `args` 就设置成一个空串
     * 位于 `args` 以前的参数是普通参数
     ``` tcl
-    # 示例
+    # ------------ 示例 ------------
     proc add { val1 args } {
         set sum $val1
         foreach i $args {
@@ -706,15 +718,15 @@ expr {数学函数}
         * `level` 的默认值为 1, 即可以访问当前过程的调用者中的变量
         * 如果要访问全局变量, `level` 为 `#0`
         ``` tcl
-        # 示例
+        # ------------ 示例 ------------
         upvar 2 other x     # 可以访问当前过程的调用者的调用者中的变量 other
         upvar #0 other x    # 可以访问全局变量 other
         ```
-    * 参数 otherVar 是希望以引用方式访问的参数的名字
-    * 参数 myVar 是当前过程中的局部变量的名字
+    * 参数 `otherVar` 是希望以引用方式访问的参数的名字
+    * 参数 `myVar` 是当前过程中的局部变量的名字
 
-    如:
     ``` tcl
+    # ------------ 示例 ------------
     proc temp { arg } {
         upvar $arg b
         set b [expr $b+2]
@@ -729,10 +741,83 @@ expr {数学函数}
     > upvar 把 $arg (实际上是过程 myexp 中的变量 a) 和过程 temp 中的变量 b 绑定, 对b的读写就相当于对 a 的读写
 
 ## 6.5. uplevel 命令
-*
+* `uplevel` 命令像是 `eval` 和 `upvar` 的结合, 把参数作为脚本处理, 正如 `eval`, 但处理脚本的变量上下文环境却不在调用堆栈层级中, 正如 `upvar`
+    ```tcl
+    # ------------ 示例 ------------
+    proc do {varName first last body} {
+        upvar $varName v
+        for {set v $first} {$v <= $last} {incr v} {
+            uplevel $body
+        }
+    }
+    set squares {}
+    do i 1 5 { lappend squares [expr $i*$i] }
+    set squares
+    ```
+## 6.6. 匿名过程
+* `apply func ?arg1 arg2 ...?`
+    ```tcl
+    # ------------ 示例 ------------
+    set states {California Delaware Hawaii Indiana Iowa}
+    lsort -command { apply { { e1 e2} {
+        expr { [string length $e1] - [string length $e2]}
+        }
+    } } $states
+    # 输出: Iowa Hawaii Indiana Delaware California
+    ```
 
 --------------------------------------------------------------------------------
 # 7. 命名空间
+
+## 7.1. 基础
+* 创建/使用命名空间: `namespace eval namespace arg ?arg ...?`
+    * 如果使用指定的命名空间不存在, 则创建
+    ```tcl
+    # ------------ 示例 ------------
+    proc whoAmI {} { return "global command" }
+    namespace eval ns {
+        proc whoAmI {} { return "namespace command"}
+    }
+    whoAmI                          # 输出: global command
+    ns::whoAmI                      # 输出: namespace command
+    narnespace eval ns { whoAmI }   # 输出: namespace command
+    ```
+* 删除命名空间: `namespace delete ?namespace namespace ...?`
+* 命名空间内变量的声明和访问: `variable ?name value...? name ?value?`
+    * 不能初始化数组, 可先声明变量, 然后单独进行一步初始化操作
+* 限定符: `::`
+    * 以 `::` 开头的表示全局命名空间
+* 访问命名空间中的命令/变量:
+    *  `空间名::命令/变量`
+    *  `${空间名变量}::命令/变量`, 即: 空间名要加 `{}`
+
+## 7.2. 其他命令
+* 获取命名空间信息
+    * `namespace qualifiers string`: 从命名空间路径中获取空间的名称
+    * `namespace tail string`: 从命名空间路径中获取命令/变量的名称
+* 导入/导出
+    * `namespace export ?-clear? ?pattern pattern ...?`: 向外提供公共的命令/变量
+    * `namespace origin command`: 查看一个可被导入的命令是由哪个命名空间原始导出的
+    * `namespace import ?-force? ?pattern pattern ...?`: 从别的空间引用命令/变量
+    * `namespace forget ?pattern pattern ...?`: 移除导入的命令/变量
+* 命名空间 "路径" 管理
+    * `namespace current`: 获取当前命名空间
+    * `namespace parent ?namespace?`: 获取上级命名空间
+    * `namespace children ?namespace? ?pattern?`: 获取下级命名空间
+    * `namespace exists namespace`: 是否存在某个命名空间
+    * `namespace which ?-command? ?-variable? name`: 获取命令/变量的完整 "路径"
+* 访问其他命名空间的变量
+    * `namespace upvar namespace otherVar myVar ?otherVar myVar ...`: 将一个命名空间中的一组变量导入当前命名空间
+* 其他
+    * `namespace code script`
+    * `namespace inscope namespace script ?arg ...?`
+    * `namespace path ?namespaceList?`
+
+## 7.3. 命令集合
+* 有关的命令组合成群组, 如 `string 子命令`, `dict 子命令`
+* 相关命令
+    * `namespace ensemble subcommand ?arg ...?`: 创建命令集合
+    * `namespace unknown ?script?`
 
 --------------------------------------------------------------------------------
 # 8. 访问文件
@@ -794,18 +879,19 @@ expr {数学函数}
         * `--`: 表示 switches 结束, 即后面以 `-` 开头的参数将不作为switches
     * 采用 `string match` 命令的匹配规则, 例如:
         ``` tcl
-        glob *.c *.h
-        # 输出: main.c hash.c hash.h
+        # ------------ 示例 ------------
+        glob *.c *.h    # 输出: main.c hash.c hash.h
         ```
     * 允许模式中包含括在`{}`中间以逗号分开的多种选择, 如:
         ``` tcl
-        glob {{src,backup}/*.[ch]}
-        # 输出: src/main.c src/hash.c src/hash.h backup/hash.c
+        # ------------ 示例 ------------
+        glob {{src,backup}/*.[ch]}  # 输出: src/main.c src/hash.c src/hash.h backup/hash.c
         # 等价于
         glob {src/*.[ch]} {backup/*.[ch]}
         ```
     * 模式以 `/` 结束, 那将只匹配目录名, 如:
         ``` tcl
+        # ------------ 示例 ------------
         glob */ # 返回当前目录的所有子目录
         ```
     * 如果 glob 返回的文件名列表为空, 通常会产生一个错误
