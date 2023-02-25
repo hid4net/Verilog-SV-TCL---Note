@@ -62,10 +62,15 @@
   - [8.4. 文件操作](#-84-文件操作-)
   - [8.5. 特殊文件的操作](#-85-特殊文件的操作-)
 - [9. 进程间通信](#-9-进程间通信-)
+  - [9.1. 终止 TCL](#-91-终止-tcl-)
+  - [9.2. 子进程与管线](#-92-子进程与管线-)
+  - [9.3. 通道](#-93-通道-)
+  - [9.4. 进程 ID](#-94-进程-id-)
 - [10. 错误与异常](#-10-错误与异常-)
-- [11. 创建和使用脚本](#-11-创建和使用脚本-)
-- [12. Tcl内部管理](#-12-tcl内部管理-)
-- [13. 历史](#-13-历史-)
+- [11. 脚本库](#-11-脚本库-)
+- [12. Tcl 内部管理](#-12-tcl-内部管理-)
+  - [12.1. 时间](#-121-时间-)
+  - [12.2. info](#-122-info-)
 
 <!-- /code_chunk_output -->
 
@@ -99,7 +104,6 @@
     ```
 * 运行脚本: `source 脚本路径`
 * 查看帮助: `help 命令`
-* 获取信息: `info`
 
 ## 1.3. 三种替换
 ### 1.3.1. 变量替换
@@ -165,9 +169,10 @@
 ## 1.6. 注释
 * `#`, 必须出现在 Tcl 解释器期望命令的第一个字符出现的地方
 * 不能使用行尾注释
+    > 本文中的示例使用了行尾注释, 仅是为了说明代码的作用
     ```tcl
     # ------------ 示例 ------------
-    # 整行注释
+    # 注释
     set a 100   # 这里的文字会被当做参数, 会报错
     set b 101;  # 行尾注释, 需要加分号
     ```
@@ -980,15 +985,129 @@ expr {数学函数}
 --------------------------------------------------------------------------------
 # 9. 进程间通信
 
+## 9.1. 终止 TCL
+* 退出 TCL: `exit ?returnCode?`
+
+## 9.2. 子进程与管线
+* 运行 OS 命令: `exec ?switches? arg ?arg ...?`
+* 也可以使用命令管线与 OS 互动
+    * 使用 `open 管线名 ?access?` 创建
+        * 管线名的第一个字符应是 `|`
+        * 可使用 `gets` 和 `puts` 与管线通信
+
+## 9.3. 通道
+* `chan blocked channelId`
+* `chan close channelId`
+* `chan configure channelId ?optionName? ?value? ?optionName value?...`
+    |         `optionName`          | 说明                                       |
+    | :---------------------------: | ------------------------------------------ |
+    |       -blocking boolean       | -                                          |
+    |      -buffering newValue      | -                                          |
+    |      -buffersize newSize      | -                                          |
+    |        -encoding name         | -                                          |
+    |         -eofchar char         | -                                          |
+    |   -eofchar {inChar outChar}   | ^                                          |
+    |       -translation mode       | 模式: `auto`, `binary`, `cr`, `crlf`, `lf` |
+    | -translation {inMode outMode} | ^                                          |
+* `chan  copy  inputChan  outputChan  ?-size  size? ?-command callback?`
+* `chan create mode cmdPrefix`
+* `chan eof channelId`
+* `chan event channelId event ?script?`
+* `chan flush channelId`
+* `chan gets channelId ?varName?`
+* `chan names ?pattern?`
+* `chan pending mode channelId`
+* `chan postevent channelId eventSpec`
+* `chan puts ?-nonewline? ?channelId? string`
+* `chan read channelId ?numChars?`
+* `chan read ?-nonewline? channelId`
+* `chan seek channelId offset ?origin?`
+* `chan tell channelId`
+* `chan truncate channelId ?length?`
+
+## 9.4. 进程 ID
+* 三种访问方式
+    * `exec ...` 返回调用的管线 PID
+    * `pid`: 返回当前 PID
+    * `pid 文件描述符`: 返回指定的 PID
+
 --------------------------------------------------------------------------------
 # 10. 错误与异常
 
---------------------------------------------------------------------------------
-# 11. 创建和使用脚本
+* 异常类型
+    | 捕获的返回值 | 说明                                  | 捕获异常的命令                                   |
+    | :----------: | ------------------------------------- | ------------------------------------------------ |
+    |      0       | 正常返回, 字符串给出返回值            | 不用捕获                                         |
+    |      1       | 错误, 字符串给出错误的描述            | `catch`                                          |
+    |      2       | `return` 命令被调用, 字符串给出返回值 | `catch`, `source`, `procedures`                  |
+    |      3       | `break` 命令被调用, 字符串为空        | `catch`, `for`, `foreach`, `while`, `procedures` |
+    |      4       | `continue` 命令被调用, 字符串为空     | ^                                                |
+    |     其他     | 由用户或实用程序定义                  | `catch`                                          |
+* 主动产生错误: `error message ?info? ?code?`
+* 捕获异常: `catch script ?resultVarName? ?optionsVarName?`
+    * 如果脚本正常运行, 返回 0
+    * `script`: 将要运行的一段脚本
+    * `resultVarName`: 保存脚本返回值或错误信息
+    * `optionsVarName`: 选项
+    ```tcl
+    # ------------ 示例 ------------
+    catch {open msg.txt} fid    # msg.txt 不存在, 会发生错误
+    set fid                     # 输出: couldn't open "msg. txt ": no such file or directory
+    ```
 
 --------------------------------------------------------------------------------
-# 12. Tcl内部管理
+# 11. 脚本库
+* 加载预编译库: `load ...`
+* 查看库路径: `info library`
+* 包: `package ...`
 
 --------------------------------------------------------------------------------
-# 13. 历史
+# 12. Tcl 内部管理
 
+## 12.1. 时间
+* 延时:
+    * `after ms`
+    * `after ms ?script script script ...?`
+    * `after cancel id`
+    * `after cancel script script script ...`
+    * `after idle ?script script script ...?`
+    * `after info ?id?`
+* 获取时间:
+    * `package require Tcl 8.5`
+    * `clock seconds`
+    * `clock milliseconds`
+    * `clock microseconds`
+    * `clock format timeVal ?-option value...?`
+    * `clock scan inputString ?-option value...?`
+    * `clock add timeVal ?count unit...? ?-option value?`
+    * `clock clicks ?-option?`
+* 运行计时:
+    * `time script ?count?`
+
+## 12.2. info
+* 变量信息
+    * `info exists varName`: ==变量是否存在==
+    * `info vars ?pattern?`: 返回所有变量
+    * `info globals ?pattern?`: 返回全局变量
+    * `info locals ?pattern?`: 返回本地变量
+* 命令信息
+    * `info commands ?pattern?`
+    * `info cmdcount`
+    * `info script ?filename?`
+    * `info complete command`
+* 过程信息
+    * `info procs ?pattern?`
+    * `info args procname`
+    * `info body procname`
+    * `info default procname arg varname`
+    * `info level ?number?`
+* 其他
+    * `info tclversion`
+    * `info library`
+    * `info hostname`
+    * `info frame ?number?`
+    * `info functions ?pattern?`
+    * `info loaded ?interp?`
+    * `info patchlevel`
+    * `info nameofexecutable`
+    * `info sharedlibextension`
