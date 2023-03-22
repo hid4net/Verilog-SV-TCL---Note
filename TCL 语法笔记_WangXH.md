@@ -334,7 +334,7 @@ expr {数学函数}
         * `-nocase`: 不区分大小写
         * `-length`: 只比较前 `int` 个字符, 如果 `int` 为负数则忽略
     * `string equal ?-nocase? ?-length int? string1 string2`: 两个字符串是否相同
-        * 某些时候可以用 `expr string1 eq/ne string2`
+        * 某些时候可以用 `expr {string1 eq/ne string2}`
 * 字符串置换
     * `string replace string first last ?newstring?`: 替换字符串中 $[first, last]$ 的字符
         * 如果没有指定 `newstring`, 则删除字符
